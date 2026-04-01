@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Redirecting...</title>
   <script>
-    // Redirect all 404s to index.html for React Router to handle
+    // Redirect to index.html while preserving the full path for React Router
     var path = window.location.pathname;
     var search = window.location.search;
     var hash = window.location.hash;
-    // Redirect to root path, preserving query and hash
-    window.location.replace('/' + search + hash);
+    // Redirect to /index.html with the original path as a query parameter
+    window.location.href = '/index.html?redirect=' + encodeURIComponent(path + search + hash);
   </script>
 </head>
 <body>
