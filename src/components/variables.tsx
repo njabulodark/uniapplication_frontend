@@ -1,0 +1,1 @@
+export const host = 'https://apply4u.co.za:8081';
