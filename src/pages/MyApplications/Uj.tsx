@@ -2,7 +2,6 @@
 import React, { useEffect, useState } from 'react';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../helper/SupabaseClient';
 import SearchableSelect from '../../components/SearchableSelect';
 
@@ -209,8 +208,6 @@ const facultyCourses: Record<string, string[]> = {
 };
 
 const Uj: React.FC = () => {
-  const navigate = useNavigate();
-
   const [formData, setFormData] = useState<FormData>({
     uj_faculty1: '',
     uj_course1: '',
@@ -229,7 +226,7 @@ const Uj: React.FC = () => {
     document.title = 'UJ Course Application';
     const token = localStorage.getItem('token');
     if (!token) {
-      navigate('/login');
+      window.location.hash = '/login';
       return;
     }
 
@@ -271,7 +268,7 @@ const Uj: React.FC = () => {
     };
 
     fetchExistingData();
-  }, [navigate]);
+  }, []);
 
   const handleFacultyChange = (
     faculty: string, 
@@ -353,7 +350,7 @@ const Uj: React.FC = () => {
       }
 
       alert('Application submitted successfully!');
-      navigate('/application#courses');
+      window.location.hash = '/application#courses';
     } catch (err: any) {
       setError(err.message || 'Something went wrong. Please try again.');
     } finally {

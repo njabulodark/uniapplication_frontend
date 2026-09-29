@@ -1,14 +1,12 @@
 import React from 'react';
 import Footer from '../components/Footer';
 import Navbar from '../components/Navbar';
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { supabase } from '../helper/SupabaseClient';
 
 function MyApplication() {
   const [data, setData] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
   const developer = false; // Toggle for testing without auth
 
   // Fetch or mock data
@@ -101,7 +99,7 @@ function MyApplication() {
       setLoading(false);
     } else {
       if (!localStorage.getItem('token')) {
-        navigate('/login');
+        window.location.hash = '/login';
       } else {
         // Fetch real data from supabase
         const fetchData = async () => {
@@ -161,7 +159,7 @@ function MyApplication() {
     // Also handle hash changes after initial load
     window.addEventListener('hashchange', handleHashNavigation);
     return () => window.removeEventListener('hashchange', handleHashNavigation);
-  }, [navigate, developer, loading]);
+  }, [developer, loading]);
 
   const applicationSubmit = async (e: React.FormEvent, value: string) => {
     e.preventDefault();
@@ -302,7 +300,7 @@ function MyApplication() {
                     </tbody>
                   </table>
                   <button
-                    onClick={() => navigate('/application/course/personal')}
+                    onClick={() => window.location.hash = '/application/course/personal'}
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded transition duration-200"
                   >
                     Edit Personal Info
@@ -336,7 +334,7 @@ function MyApplication() {
                     </tbody>
                   </table>
                   <button
-                    onClick={() => navigate('/application/course/contact')}
+                    onClick={() => window.location.hash = '/application/course/contact'}
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded transition duration-200"
                   >
                     Edit Contact Info
@@ -372,7 +370,7 @@ function MyApplication() {
                     </tbody>
                   </table>
                   <button
-                    onClick={() => navigate('/application/course/Additional')}
+                    onClick={() => window.location.hash = '/application/course/Additional'}
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded transition duration-200"
                   >
                     Edit Additional Info
@@ -404,7 +402,7 @@ function MyApplication() {
                     </tbody>
                   </table>
                   <button
-                    onClick={() => navigate('/application/course/guadian')}
+                    onClick={() => window.location.hash = '/application/course/guadian'}
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded transition duration-200"
                   >
                     Edit Guardian Info
@@ -439,7 +437,7 @@ function MyApplication() {
                     </table>
                   </div>
                   <button
-                    onClick={() => navigate('/application/course/subjects')}
+                    onClick={() => window.location.hash = '/application/course/subjects'}
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded transition duration-200"
                   >
                     Edit Subjects
@@ -482,7 +480,7 @@ function MyApplication() {
                     </tbody>
                   </table>
                   <button
-                    onClick={() => navigate('/application/course/nwu')}
+                    onClick={() => window.location.hash = '/application/course/nwu'}
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded transition duration-200"
                   >
                     Edit NWU Info
@@ -517,7 +515,7 @@ function MyApplication() {
                     </tbody>
                   </table>
                   <button
-                    onClick={() => navigate('/application/course/uwc')}
+                    onClick={() => window.location.hash = '/application/course/uwc'}
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded transition duration-200"
                   >
                     Edit UWC Info
@@ -554,7 +552,7 @@ function MyApplication() {
                     </tbody>
                   </table>
                   <button
-                    onClick={() => navigate('/application/course/cao')}
+                    onClick={() => window.location.hash = '/application/course/cao'}
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded transition duration-200"
                   >
                     Edit CAO Info
@@ -593,7 +591,7 @@ function MyApplication() {
                     </tbody>
                   </table>
                   <button
-                    onClick={() => navigate('/application/course/uj')}
+                    onClick={() => window.location.hash = '/application/course/uj'}
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded transition duration-200"
                   >
                     Edit UJ Info

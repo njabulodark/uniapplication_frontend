@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import Footer from "../../components/Footer";
 import Navbar from "../../components/Navbar";
-import { useNavigate } from "react-router-dom";
 import { supabase } from '../../helper/SupabaseClient'
 
 // Define TypeScript interfaces
@@ -29,8 +28,6 @@ interface PersonalFormData {
 }
 
 const Personal: React.FC = () => {
-  const navigate = useNavigate();
-
   const [formData, setFormData] = useState<PersonalFormData>({
     title: "",
     first_name: "",
@@ -62,7 +59,7 @@ const Personal: React.FC = () => {
     document.title = "Modify Personal Information";
     const token = localStorage.getItem("token");
     if (!token) {
-      navigate("/login");
+      window.location.hash = "/login";
       return;
     }
 
@@ -193,7 +190,7 @@ const Personal: React.FC = () => {
       }
 
       alert("Form submitted successfully!");
-      navigate("/my_application#personal");
+      window.location.hash = "/my_application#personal";
     } catch (err) {
       console.error("Unexpected error:", err);
       alert("An unexpected error occurred. Please try again.");

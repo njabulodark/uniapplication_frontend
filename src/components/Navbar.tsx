@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 // import axios from 'axios';
 // import { host } from './variables';
@@ -61,7 +61,6 @@ function MobileDropdown({ label, children }: { label: string; children: React.Re
 export default function Navbar() {
   const [authState, setAuthState] = useState<'checking' | 'loggedIn' | 'loggedOut'>('checking');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const navigate = useNavigate();
 
   // Validate token with server
   const validateToken = async () => {
@@ -80,7 +79,7 @@ export default function Navbar() {
       localStorage.removeItem("token");
       setAuthState('loggedOut');
       setIsMobileMenuOpen(false);
-      navigate("/");
+      window.location.hash = "/";
   };
 
   // Check login status on mount
@@ -120,22 +119,12 @@ export default function Navbar() {
                 Home
               </Link>
 
-              <Dropdown label="Application">
-                <Link
-                  to="/application/"
-                  className="block px-4 py-2 text-base text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition"
-                >
-                  Apply
-                </Link>
-                {isLoggedIn && (
-                  <Link
-                    to="/my_application/"
-                    className="block px-4 py-2 text-base text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition"
-                  >
-                    Display Info
-                  </Link>
-                )}
-              </Dropdown>
+              <Link
+                to="/application/"
+                className="px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-indigo-600 hover:bg-indigo-50 transition"
+              >
+                Application
+              </Link>
 
               <Link
                 to="/payment/"
@@ -169,12 +158,6 @@ export default function Navbar() {
                 </div>
               ) : !isLoggedIn ? (
                 <>
-                  <Link
-                    to="/signup"
-                    className="px-4 py-2 border border-blue-600 text-blue-600 rounded-md hover:bg-blue-50 transition-colors text-base"
-                  >
-                    Sign Up
-                  </Link>
                   <Link
                     to="/login"
                     className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-base"
@@ -225,24 +208,13 @@ export default function Navbar() {
             Home
           </Link>
 
-          <MobileDropdown label="Application">
-            <Link
-              to="/application/"
-              className="block px-3 py-2 rounded-md text-base text-gray-600 hover:text-indigo-600 hover:bg-indigo-50"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              Apply
-            </Link>
-            {isLoggedIn && (
-              <Link
-                to="/my_application/"
-                className="block px-3 py-2 rounded-md text-base text-gray-600 hover:text-indigo-600 hover:bg-indigo-50"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Display Info
-              </Link>
-            )}
-          </MobileDropdown>
+          <Link
+            to="/application/"
+            className="block px-3 py-2 rounded-md text-lg font-medium text-gray-700 hover:text-indigo-600 hover:bg-indigo-50"
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            Application
+          </Link>
 
           <Link
             to="/payment/"
@@ -279,13 +251,6 @@ export default function Navbar() {
             </div>
           ) : !isLoggedIn ? (
             <>
-              <Link
-                to="/signup"
-                className="block px-3 py-2 rounded-md text-lg font-medium text-gray-700 hover:text-indigo-600 hover:bg-indigo-50"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Sign Up
-              </Link>
               <Link
                 to="/login"
                 className="block px-3 py-2 rounded-md text-lg font-medium text-gray-700 hover:text-indigo-600 hover:bg-indigo-50"

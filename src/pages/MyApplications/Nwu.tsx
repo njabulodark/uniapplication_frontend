@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import Footer from "../../components/Footer";
 import Navbar from "../../components/Navbar";
-import { useNavigate } from "react-router-dom";
 import { supabase } from '../../helper/SupabaseClient'
 import SearchableSelect from "../../components/SearchableSelect";
 
@@ -64,8 +63,6 @@ interface NwuFormData {
 }
 
 const Nwu: React.FC = () => {
-  const navigate = useNavigate();
-
   const [formData, setFormData] = useState<NwuFormData>({
     nwu_campus1: "",
     nwu_course1: "",
@@ -82,7 +79,7 @@ const Nwu: React.FC = () => {
     document.title = "NWU course";
     const token = localStorage.getItem("token");
     if (!token) {
-      navigate("/login");
+      window.location.hash = "/login";
     }
   }, []);
 
@@ -143,7 +140,7 @@ const Nwu: React.FC = () => {
       }
 
       alert("Course information submitted successfully!");
-      navigate("/my_application#courses");
+      window.location.hash = "/my_application#courses";
     } catch (err) {
       console.error("Unexpected error:", err);
       setError("An unexpected error occurred. Please try again.");

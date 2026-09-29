@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 interface SearchableSelectProps {
   options: string[];
@@ -15,79 +15,106 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
   value,
   onChange,
   className = "",
-  ...props
+  placeholder = "Search and select...",
+  required = false,
 }) => {
-  const [inputValue, setInputValue] = useState<string>(value || "");
-  const [filteredOptions, setFilteredOptions] = useState<string[]>(options);
-  const [showOptions, setShowOptions] = useState<boolean>(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState(value || '');
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Handle input changes
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    setInputValue(val);
-    onChange(val);
-    
-    // Filter options based on input
-    const filtered = options.filter(option => 
-      option.toLowerCase().includes(val.toLowerCase())
-    );
-    setFilteredOptions(filtered);
-    setShowOptions(true);
-  };
-
-  // Handle option selection
-  const handleOptionClick = (option: string) => {
-    setInputValue(option);
-    onChange(option);
-    setShowOptions(false);
-  };
-
-  // Close dropdown when clicking outside
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
-        setShowOptions(false);
+    const handleClickOutside = (event: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
       }
     };
-    
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Update filtered options when parent options change
   useEffect(() => {
-    setFilteredOptions(options);
-    // Reset input value if options change and current value is not in new options
-    if (value && !options.includes(value)) {
-      setInputValue("");
-      onChange("");
+    if (value) {
+      setSearchTerm(value);
     }
-  }, [options]);
+  }, [value]);
+
+  const filteredOptions = options.filter(option =>
+    option.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const handleOptionSelect = (option: string) => {
+    setSearchTerm(option);
+    onChange(option);
+    setIsOpen(false);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setSearchTerm(newValue);
+    onChange(newValue);
+    if (!isOpen) {
+      setIsOpen(true);
+    }
+  };
+
+  const handleFocus = () => {
+    setIsOpen(true);
+  };
 
   return (
     <div ref={wrapperRef} className={`relative w-full ${className}`}>
-      <input
-        type="text"
-        value={inputValue}
-        onChange={handleInputChange}
-        onFocus={() => setShowOptions(true)}
-        className="w-full px-3 py-2 text-gray-700 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        {...props}
-      />
-      
-      {showOptions && filteredOptions.length > 0 && (
-        <ul className="absolute z-10 w-full mt-1 overflow-auto bg-white border border-gray-300 rounded-md shadow-lg max-h-60">
-          {filteredOptions.map((option, index) => (
-            <li 
-              key={index} 
-              onClick={() => handleOptionClick(option)}
-              className="px-3 py-2 cursor-pointer hover:bg-blue-100"
-            >
-              {option}
-            </li>
-          ))}
-        </ul>
+      <div
+        onClick={() => setIsOpen(!isOpen)}
+        className="relative w-full cursor-pointer"
+      >
+        <input
+          ref={inputRef}
+          type="text"
+          value={searchTerm}
+          onChange={handleInputChange}
+          onFocus={handleFocus}
+          placeholder={placeholder}
+          required={required}
+          className="w-full px-3 py-2 text-gray-700 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10"
+        />
+        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+          <svg
+            className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${isOpen ? 'transform rotate-180' : ''}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M19 9l-7 7-7-7"
+            />
+          </svg>
+        </div>
+      </div>
+
+      {isOpen && (
+        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+          {filteredOptions.length > 0 ? (
+            <ul className="py-2">
+              {filteredOptions.map((option, index) => (
+                <li
+                  key={index}
+                  onClick={() => handleOptionSelect(option)}
+                  className={`px-3 py-2 cursor-pointer hover:bg-blue-50 transition-colors ${
+                    option === value ? 'bg-blue-100 font-semibold' : ''
+                  }`}
+                >
+                  {option}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="px-3 py-2 text-gray-500 text-sm">No matching options</div>
+          )}
+        </div>
       )}
     </div>
   );

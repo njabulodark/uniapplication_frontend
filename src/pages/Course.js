@@ -5,7 +5,6 @@ import "../components/Form.css";
 import "../App.css";
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { useNavigate } from 'react-router-dom';
 import { host } from "../components/variables";
 
 function Course() {
@@ -45,16 +44,14 @@ function Course() {
             console.log(res);
         });
 
-        navigate("/application/files");
+        window.location.href = "/application/files";
     }
-
-    const navigate = useNavigate();
 
     useEffect(() => {
         document.title = "Course Selection";
 
         if (localStorage.getItem("userId") === null){
-            navigate("/login");
+            window.location.href = "/login";
         }
 
     }, []);

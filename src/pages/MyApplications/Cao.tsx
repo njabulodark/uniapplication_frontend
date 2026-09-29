@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import Footer from '../../components/Footer';
 import Navbar from '../../components/Navbar';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../helper/SupabaseClient';
 import SearchableSelect from '../../components/SearchableSelect';
 import courses from './courses.json';
@@ -17,7 +16,6 @@ interface CaoFormData {
 }
 
 const Cao: React.FC = () => {
-  const navigate = useNavigate();
   const numOptions = 6; // Number of options to display
 
   // Initialize form data with arrays for each option
@@ -40,7 +38,7 @@ const Cao: React.FC = () => {
     document.title = "CAO course selection";
     const token = localStorage.getItem("token");
     if (!token) {
-      navigate("/login");
+      window.location.hash = "/login";
       return;
     }
 
@@ -270,7 +268,7 @@ const Cao: React.FC = () => {
       }
 
       alert("Course information submitted successfully!");
-      navigate("/application#courses");
+      window.location.hash = "/application#courses";
     } catch (err) {
       console.error("Unexpected error:", err);
       setError("An unexpected error occurred. Please try again.");

@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import Footer from "../../components/Footer";
 import Navbar from "../../components/Navbar";
-import { useNavigate } from "react-router-dom";
 import { supabase } from '../../helper/SupabaseClient';
 import { motion } from "framer-motion";
 import { Button } from "../../components/ui/button";
@@ -113,8 +112,6 @@ interface SubjectFormData {
 }
 
 const Subjects: React.FC = () => {
-  const navigate = useNavigate();
-
   const [formData, setFormData] = useState<SubjectFormData>({
     subject1: "", subject2: "", subject3: "", subject4: "", subject5: "",
     subject6: "", subject7: "", subject8: "", subject9: "",
@@ -131,7 +128,7 @@ const Subjects: React.FC = () => {
     document.title = "Modify Subjects Information";
     const token = localStorage.getItem("token");
     if (!token) {
-      navigate("/login");
+      window.location.hash = "/login";
       return;
     }
 
@@ -224,7 +221,7 @@ const Subjects: React.FC = () => {
       }
 
       alert("Subject information submitted successfully!");
-      navigate("/my_application#subjects");
+      window.location.hash = "/my_application#subjects";
     } catch (err) {
       console.error("Unexpected error:", err);
       alert("An unexpected error occurred. Please try again.");

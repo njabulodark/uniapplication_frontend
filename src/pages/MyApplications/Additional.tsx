@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import Footer from "../../components/Footer";
 import Navbar from "../../components/Navbar";
-import { useNavigate } from "react-router-dom";
 import { supabase } from '../../helper/SupabaseClient'
 
 
@@ -17,8 +16,6 @@ interface AdditionalFormData {
 }
 
 const Additional: React.FC = () => {
-  const navigate = useNavigate();
-
   const [formData, setFormData] = useState<AdditionalFormData>({
     education_department: "",
     examination_number: "",
@@ -37,7 +34,7 @@ const Additional: React.FC = () => {
     document.title = "Modify Additional Information";
     const token = localStorage.getItem("token");
     if (!token) {
-      navigate("/login");
+      window.location.hash = "/login";
       return;
     }
 
@@ -125,7 +122,7 @@ const Additional: React.FC = () => {
       }
 
       alert("Additional information submitted successfully!");
-      navigate("/my_application#additional");
+      window.location.hash = "/my_application#additional";
     } catch (err) {
       console.error("Unexpected error:", err);
       alert("An unexpected error occurred. Please try again.");

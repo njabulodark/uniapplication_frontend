@@ -1,10 +1,8 @@
 import './App.css';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
-import { useNavigate } from 'react-router-dom';
 
 function App() {
-  const navigate = useNavigate();
   const universities = [
     {
       name: "University of Johannesburg",
@@ -121,7 +119,7 @@ function App() {
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-fade-in-up delay-300">
               <button
-                onClick={() => navigate('/application')}
+                onClick={() => window.location.hash = '/application'}
                 className="group px-8 py-4 bg-white text-indigo-900 rounded-xl font-semibold shadow-2xl hover:shadow-white/25 transition-all duration-300 transform hover:-translate-y-1 flex items-center gap-2"
               >
                 Start Your Application
@@ -395,7 +393,7 @@ function App() {
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <button
-                onClick={() => navigate('/application')}
+                onClick={() => window.location.hash = '/application'}
                 className="group px-8 py-4 bg-white text-indigo-900 rounded-xl font-bold shadow-2xl hover:shadow-white/25 transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-center gap-2"
               >
                 Get Started Now

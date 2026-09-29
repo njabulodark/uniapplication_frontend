@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import Footer from "../../components/Footer";
 import Navbar from "../../components/Navbar";
-import { useNavigate } from "react-router-dom";
 import { supabase } from '../../helper/SupabaseClient'
 
 
@@ -19,8 +18,6 @@ interface GuardianFormData {
 }
 
 const Guardian: React.FC = () => {
-  const navigate = useNavigate();
-
   const [formData, setFormData] = useState<GuardianFormData>({
     guadian: "",
     guadian_title: "",
@@ -40,7 +37,7 @@ const Guardian: React.FC = () => {
     document.title = "Modify Guardian Information";
     const token = localStorage.getItem("token");
     if (!token) {
-      navigate("/login");
+      window.location.hash = "/login";
       return;
     }
 
@@ -130,7 +127,7 @@ const Guardian: React.FC = () => {
       }
 
       alert("Guardian information submitted successfully!");
-      navigate("/my_application#guadian");
+      window.location.hash = "/my_application#guadian";
     } catch (err) {
       console.error("Unexpected error:", err);
       alert("An unexpected error occurred. Please try again.");

@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import Footer from "../components/Footer";
 import Navbar from "../components/Navbar";
 import { useState, useEffect } from "react";
@@ -18,8 +18,6 @@ export default function Signup() {
   const [errEmail, setErrEmail] = useState("");
   const [errUserName, setErrUserName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const navigate = useNavigate();
 
   useEffect(() => {
     document.title = "Sign Up";
@@ -128,7 +126,7 @@ export default function Signup() {
       // Consider using HTTP-only cookies for tokens instead of localStorage for better security
       localStorage.setItem("token", data.session?.access_token || "");
       setIsSubmitting(false);
-      navigate("/confirm");
+      window.location.hash = "/confirm";
     }
   };
 

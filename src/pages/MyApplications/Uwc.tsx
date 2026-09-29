@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from "react";
 import Footer from "../../components/Footer";
 import Navbar from "../../components/Navbar";
-import { useNavigate } from "react-router-dom";
-import { supabase } from '../../helper/SupabaseClient';
+import { supabase } from '../../helper/SupabaseClient'
 import SearchableSelect from "../../components/SearchableSelect";
 
 // Course options grouped by faculty
@@ -63,8 +62,6 @@ interface UwcFormData {
 }
 
 const Uwc: React.FC = () => {
-  const navigate = useNavigate();
-
   const [formData, setFormData] = useState<UwcFormData>({
     uwc_faculty1: "",
     uwc_course1: "",
@@ -81,7 +78,7 @@ const Uwc: React.FC = () => {
     document.title = "UWC course";
     const token = localStorage.getItem("token");
     if (!token) {
-      navigate("/login");
+      window.location.hash = "/login";
     }
   }, []);
 
@@ -142,7 +139,7 @@ const Uwc: React.FC = () => {
       }
 
       alert("Course information submitted successfully!");
-      navigate("/my_application#courses");
+      window.location.hash = "/my_application#courses";
     } catch (err) {
       console.error("Unexpected error:", err);
       setError("An unexpected error occurred. Please try again.");

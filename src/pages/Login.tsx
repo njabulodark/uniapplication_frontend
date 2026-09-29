@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import Footer from "../components/Footer";
 import Navbar from "../components/Navbar";
 import { useEffect, useState } from "react";
@@ -15,7 +15,6 @@ function Login() {
     password: "",
   });
   const [error, setError] = useState("");
-  const navigate = useNavigate();
 
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     setValues((prev) => ({ ...prev, [e.target.name]: sanitizeInput(e.target.value) }));
@@ -41,7 +40,8 @@ function Login() {
       localStorage.setItem('userId', data.user?.id || '');
 
       if (data.session) {
-        navigate(localStorage.getItem('prevPage') || '/');
+        const prev = localStorage.getItem('prevPage');
+        window.location.hash = prev?.includes('#') ? prev.split('#')[1] : prev || '/';
       }
     } catch (err) {
       setError("An error occurred during login.");
@@ -102,10 +102,7 @@ function Login() {
 
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
-              Don't have an account?{" "}
-              <Link to="/signup" className="text-blue-600 hover:underline">
-                Sign up
-              </Link>
+              Don't have an account? Contact support to create one.
             </p>
           </div>
         </div>
