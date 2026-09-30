@@ -1,8 +1,346 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Footer from '../components/Footer';
 import Navbar from '../components/Navbar';
-import { useState, useEffect } from 'react';
 import { supabase } from '../helper/SupabaseClient';
+import {
+  User,
+  Phone,
+  FileText,
+  ShieldCheck,
+  GraduationCap,
+  Pencil,
+  CircleCheck,
+  CircleX,
+  Copy,
+  Check,
+  Send,
+  Wallet,
+  Building2,
+  Loader,
+  IdCard,
+} from 'lucide-react';
+
+// ---------- Shared helpers & sub-components ----------
+
+const display = (value?: unknown): string =>
+  value === null || value === undefined || String(value).trim() === ''
+    ? 'Not available'
+    : String(value).trim();
+
+const SECTIONS = [
+  { id: 'status', label: 'Overview' },
+  { id: 'personal', label: 'Personal' },
+  { id: 'contact', label: 'Contact' },
+  { id: 'additional', label: 'Additional' },
+  { id: 'guardian', label: 'Guardian' },
+  { id: 'subjects', label: 'Subjects' },
+  { id: 'courses', label: 'Courses' },
+  { id: 'actions', label: 'Submit' },
+];
+
+function SectionNav() {
+  const [activeId, setActiveId] = useState(SECTIONS[0].id);
+
+  useEffect(() => {
+    const sections = SECTIONS
+      .map(({ id }) => document.getElementById(id))
+      .filter((el): el is HTMLElement => Boolean(el));
+    if (sections.length === 0) return;
+
+    let raf = 0;
+    const update = () => {
+      const probe = 140; // keep in sync with sticky nav + scroll-mt offset
+      let current = sections[0].id;
+      for (const el of sections) {
+        if (el.getBoundingClientRect().top <= probe) current = el.id;
+      }
+      // At the very bottom of the page, highlight the last section
+      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2) {
+        current = sections[sections.length - 1].id;
+      }
+      setActiveId(current);
+    };
+    const onScroll = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(update);
+    };
+    update();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+    };
+  }, []);
+
+  const scrollTo = (id: string) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    setActiveId(id);
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  return (
+    <nav className="sticky top-16 z-40 border-b border-gray-200 bg-white/85 backdrop-blur">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="flex gap-2 overflow-x-auto py-3">
+          {SECTIONS.map((section) => (
+            <button
+              key={section.id}
+              type="button"
+              onClick={() => scrollTo(section.id)}
+              className={
+                activeId === section.id
+                  ? 'whitespace-nowrap rounded-full border border-indigo-600 bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white transition'
+                  : 'whitespace-nowrap rounded-full border border-gray-200 bg-white px-4 py-1.5 text-sm font-medium text-gray-600 transition hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700'
+              }
+            >
+              {section.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </nav>
+  );
+}
+
+function GroupHeading({
+  icon: Icon,
+  title,
+  subtitle,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  subtitle?: string;
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-600/10 text-indigo-700">
+        <Icon className="h-5 w-5" />
+      </div>
+      <div>
+        <h2 className="text-base font-bold text-gray-900">{title}</h2>
+        {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
+      </div>
+    </div>
+  );
+}
+
+type InfoField = { label: string; value?: unknown };
+
+function EditButton({ path }: { path: string }) {
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        window.location.hash = path;
+      }}
+      className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-100 active:scale-[0.97]"
+    >
+      <Pencil className="h-3.5 w-3.5" />
+      Edit
+    </button>
+  );
+}
+
+function InfoCard({
+  id,
+  title,
+  subtitle,
+  icon: Icon,
+  tone,
+  editPath,
+  fields,
+}: {
+  id: string;
+  title: string;
+  subtitle?: string;
+  icon: React.ComponentType<{ className?: string }>;
+  tone: string;
+  editPath: string;
+  fields: InfoField[];
+}) {
+  return (
+    <div
+      id={id}
+      className="flex scroll-mt-32 flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
+    >
+      <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-5 py-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${tone}`}>
+            <Icon className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <h3 className="truncate font-bold text-gray-900">{title}</h3>
+            {subtitle && <p className="truncate text-xs text-gray-500">{subtitle}</p>}
+          </div>
+        </div>
+        <EditButton path={editPath} />
+      </div>
+      <div className="flex-1">
+        {fields.map((field) => (
+          <div
+            key={field.label}
+            className="grid grid-cols-1 gap-x-4 border-b border-gray-50 px-5 py-2.5 text-sm transition-colors last:border-0 hover:bg-gray-50/70 sm:grid-cols-5"
+          >
+            <span className="text-gray-500 sm:col-span-2">{field.label}</span>
+            <span className="break-words font-medium text-gray-900 sm:col-span-3">
+              {display(field.value)}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CopyRow({
+  label,
+  value,
+  accent = false,
+}: {
+  label: string;
+  value: string;
+  accent?: boolean;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  const onCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch (error) {
+      console.error('Could not copy to clipboard:', error);
+    }
+  };
+
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-xl bg-white px-3.5 py-2.5 ring-1 ring-amber-200/70">
+      <div className="min-w-0">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-700/80">{label}</p>
+        <p className={`truncate text-sm font-semibold ${accent ? 'text-emerald-700' : 'text-gray-900'}`}>
+          {value}
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={onCopy}
+        title={`Copy ${label}`}
+        className="shrink-0 rounded-md p-1.5 text-gray-500 transition hover:bg-gray-100 hover:text-gray-700"
+      >
+        {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
+      </button>
+    </div>
+  );
+}
+
+function UniversityCard({
+  id,
+  name,
+  tagline,
+  logo,
+  rows,
+  editPath,
+}: {
+  id: string;
+  name: string;
+  tagline: string;
+  logo: string;
+  rows: { label?: unknown; value?: unknown }[];
+  editPath: string;
+}) {
+  return (
+    <div
+      id={id}
+      className="flex scroll-mt-32 flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
+    >
+      <div className="flex items-center gap-3 border-b border-gray-100 px-5 py-4">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gray-50 p-1.5 ring-1 ring-gray-200">
+          <img src={logo} alt={`${name} logo`} className="max-h-full max-w-full object-contain" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate font-bold text-gray-900">{name}</h3>
+          <p className="truncate text-xs text-gray-500">{tagline}</p>
+        </div>
+        <EditButton path={editPath} />
+      </div>
+      <div className="flex-1">
+        <div className="grid grid-cols-5 gap-x-4 px-5 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+          <span className="col-span-2">Faculty / Campus</span>
+          <span className="col-span-3">Course</span>
+        </div>
+        <div className="divide-y divide-gray-100">
+          {rows.map((row, index) => (
+            <div
+              key={index}
+              className="grid grid-cols-5 items-center gap-x-4 px-5 py-2.5 text-sm transition-colors hover:bg-gray-50/70"
+            >
+              <span className="col-span-2 truncate font-medium text-gray-700" title={display(row.label)}>
+                {display(row.label)}
+              </span>
+              <span className="col-span-3 truncate font-medium text-gray-900" title={display(row.value)}>
+                {display(row.value)}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SubjectsTable({ data }: { data: Record<string, string> }) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-gray-200 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+            <th className="py-2.5 pl-5 pr-4">Subject</th>
+            <th className="px-4 py-2.5">Level</th>
+            <th className="w-36 py-2.5 pl-4 pr-5">Score</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-100">
+          {Array.from({ length: 9 }, (_, index) => index + 1).map((i) => {
+            const subject = data[`subject${i}`];
+            const level = data[`level${i}`];
+            const rawPct = data[`percentage${i}`];
+            const pct = Number(rawPct);
+            const hasPct = String(rawPct ?? '').trim() !== '' && !Number.isNaN(pct);
+            const barColor = hasPct
+              ? pct >= 70
+                ? 'bg-emerald-500'
+                : pct >= 50
+                  ? 'bg-amber-500'
+                  : 'bg-red-500'
+              : 'bg-gray-300';
+            return (
+              <tr key={i} className="transition-colors hover:bg-gray-50/70">
+                <td className="py-3 pl-5 pr-4 font-medium text-gray-900">{display(subject)}</td>
+                <td className="px-4 py-3 text-gray-700">{display(level)}</td>
+                <td className="py-3 pl-4 pr-5">
+                  <div className="flex items-center gap-3">
+                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-gray-100">
+                      <div
+                        className={`h-full rounded-full ${barColor}`}
+                        style={{ width: `${hasPct ? Math.min(100, Math.max(0, pct)) : 0}%` }}
+                      />
+                    </div>
+                    <span className="w-10 text-right text-xs font-semibold text-gray-700">
+                      {hasPct ? `${pct}%` : '—'}
+                    </span>
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
 
 function MyApplication() {
   const [data, setData] = useState<Record<string, string>>({});
@@ -189,438 +527,362 @@ function MyApplication() {
   //   return URL.createObjectURL(blob);
   // };
 
-  if (loading ) {
+  if (loading) {
     return (
-      <div className="min-h-screen flex flex-col">
+      <div className="flex min-h-screen flex-col">
         <Navbar />
-        <div className="flex-1 flex items-center justify-center h-96">
-          <p className="text-gray-600">Loading...</p>
+        <div className="flex flex-1 flex-col items-center justify-center gap-4 py-32">
+          <Loader className="h-8 w-8 animate-spin text-indigo-600" />
+          <p className="text-sm font-medium text-gray-500">Loading your application…</p>
         </div>
         <Footer />
       </div>
     );
   }
 
+  // Derived display values
+  const fullName = [data.title, data.first_name, data.surname]
+    .map((part) => (part || '').trim())
+    .filter(Boolean)
+    .join(' ');
+  const avatarInitials =
+    [data.first_name, data.surname]
+      .map((part) => (part || '').trim().charAt(0).toUpperCase())
+      .filter(Boolean)
+      .join('') || 'U';
+  const ready = data.ready === '1';
+  const paid = data.paid === '1';
+  const universitiesSelected = [
+    Boolean(data.nwu_course1 || data.nwu_course2),
+    Boolean(data.uwc_course1 || data.uwc_course2),
+    Boolean(data.uj_course1 || data.uj_course2),
+    Boolean(
+      ['cao_course1', 'cao_course2', 'cao_course3', 'cao_course4', 'cao_course5', 'cao_course6'].some(
+        (key) => (data[key] || '').trim() !== '',
+      ),
+    ),
+  ].filter(Boolean).length;
+  const subjectsSelected = Array.from({ length: 9 }, (_, i) => i + 1).filter(
+    (i) => (data[`subject${i}`] || '').trim() !== '',
+  ).length;
+
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="flex min-h-screen flex-col bg-gray-50">
       <Navbar />
 
-      <main className="flex-1">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Application Status */}
-          <section className="space-y-6">
-            <div className="bg-white shadow-md rounded-lg p-6 space-y-4">
-              <h2 className="text-xl font-semibold text-center text-gray-800">
-                Application Status
-              </h2>
-              <div className="flex flex-wrap justify-center gap-4">
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`w-3 h-3 rounded-full ${
-                      data.ready === '1' ? 'bg-green-500' : 'bg-red-500'
-                    }`}
-                  ></span>
-                  <span className="text-sm text-gray-700">
-                    {data.ready === '1'
-                      ? 'Application Ready'
-                      : 'Application Not Ready'}
+      {/* Hero header */}
+      <section className="relative overflow-hidden bg-gradient-to-r from-indigo-600 via-indigo-700 to-blue-800">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(255,255,255,0.14),transparent_55%)]" />
+        <div className="relative mx-auto flex max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 md:flex-row md:items-center lg:px-8">
+          <div className="flex items-center gap-4">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-2xl font-bold text-white ring-1 ring-white/30">
+              {avatarInitials}
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-indigo-200">My Application</p>
+              <h1 className="text-2xl font-bold text-white">{fullName || 'Applicant'}</h1>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                {data['identification_number'] ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-indigo-100 ring-1 ring-white/20">
+                    <IdCard className="h-3.5 w-3.5" />
+                    {data['identification_number']}
                   </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`w-3 h-3 rounded-full ${
-                      data.paid === '1' ? 'bg-green-500' : 'bg-red-500'
-                    }`}
-                  ></span>
-                  <span className="text-sm text-gray-700">
-                    {data.paid === '1'
-                      ? 'Application Paid'
-                      : 'Application Not Paid'}
-                  </span>
-                </div>
-              </div>
-
-              {data.paid !== '1' && (
-                <div className="p-4 border border-gray-200 rounded-lg bg-gray-50 mt-4">
-                  <h3 className="font-semibold text-gray-800">
-                    Payment Information
-                  </h3>
-                  <p className="text-sm text-gray-600 mt-2">
-                    Please pay the application fee of R50 to the following account:
-                  </p>
-                  <ul className="mt-2 space-y-1 text-sm text-gray-700">
-                    <li>Account Bank: Capitec</li>
-                    <li>Account Number: 1624390313</li>
-                    <li>Account Type: Savings</li>
-                    <li className="text-green-600">
-                      Reference: {data['identification_number'] || 'Your ID'}
-                    </li>
-                  </ul>
-                  <p className="text-xs mt-2 text-gray-500">
-                    Once you have paid, we will use your ID number to verify you.
-                    So please use your ID number as reference.
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Personal Details */}
-            <div className="bg-white shadow-md rounded-lg p-6 space-y-6">
-              <h2 className="text-xl font-semibold text-center text-gray-800 mb-4">
-                Application Information
-              </h2>
-              <div className="grid md:grid-cols-2 gap-6">
-                {/* Personal Info */}
-                <div className="border border-gray-200 rounded-lg p-4 space-y-4">
-                  <h3 className="font-semibold text-gray-800">Personal Details</h3>
-                  <table className="w-full table-auto text-sm text-gray-700">
-                    <tbody>
-                      {Object.entries({
-                        Title: data.title,
-                        'First Name': data.first_name,
-                        'Middle Name': data.middle_name,
-                        Initials: data.initials,
-                        Surname: data.surname,
-                        ID: data['identification_number'],
-                        'Date of Birth': data.date_of_birth?.split('T')[0],
-                        Gender: data.gender,
-                        'Marriage Status': data.marriage_status,
-                        Race: data.race,
-                        Population: data.population,
-                        Disability: data.disability,
-                        School: data.school,
-                      }).map(([key, value]) => (
-                        <tr key={key} className="border-b border-gray-200">
-                          <th className="text-left py-2 px-4 font-medium">
-                            {key}
-                          </th>
-                          <td className="py-2 px-4">{value || 'Not available'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  <button
-                    onClick={() => window.location.hash = '/application/course/personal'}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded transition duration-200"
-                  >
-                    Edit Personal Info
-                  </button>
-                </div>
-
-                {/* Contact Info */}
-                <div className="border border-gray-200 rounded-lg p-4 space-y-4">
-                  <h3 className="font-semibold text-gray-800">
-                    Contact Information
-                  </h3>
-                  <table className="w-full table-auto text-sm text-gray-700">
-                    <tbody>
-                      {Object.entries({
-                        email: data.email,
-                        'Phone Number': data.cell_num,
-                        'Box Number': data.boxnumber,
-                        'Street Address': data.streat_address,
-                        Suburb: data.suburb,
-                        'Postal Code': data.postal_code,
-                        City: data.city,
-                        Province: data.province,
-                      }).map(([key, value]) => (
-                        <tr key={key} className="border-b border-gray-200">
-                          <th className="text-left py-2 px-4 font-medium">
-                            {key}
-                          </th>
-                          <td className="py-2 px-4">{value || 'Not available'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  <button
-                    onClick={() => window.location.hash = '/application/course/contact'}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded transition duration-200"
-                  >
-                    Edit Contact Info
-                  </button>
-                </div>
-              </div>
-
-              {/* Additional Info Sections */}
-              <div className="grid md:grid-cols-2 gap-6 mt-6">
-                <div className="border border-gray-200 rounded-lg p-4 space-y-4">
-                  <h3 className="font-semibold text-gray-800">
-                    Additional Information
-                  </h3>
-                  <table className="w-full table-auto text-sm text-gray-700">
-                    <tbody>
-                      {Object.entries({
-                        'Examination Number': data.examination_number,
-                        'Education Department': data['education_department'],
-                        'Specify Device': data['specify_device'],
-                        'Presentation Method': data['presentation_method'],
-                        'Matric Upgrading': data.matric_upgrading,
-                        'Matric Completed': data.matric_completed,
-                        'Highest Grade Passed': data.highest_grade,
-                        'Matric Year': data['matric_year'],
-                      }).map(([key, value]) => (
-                        <tr key={key} className="border-b border-gray-200">
-                          <th className="text-left py-2 px-4 font-medium">
-                            {key}
-                          </th>
-                          <td className="py-2 px-4">{value || 'Not available'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  <button
-                    onClick={() => window.location.hash = '/application/course/Additional'}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded transition duration-200"
-                  >
-                    Edit Additional Info
-                  </button>
-                </div>
-
-                <div className="border border-gray-200 rounded-lg p-4 space-y-4">
-                  <h3 className="font-semibold text-gray-800">
-                    Guardian Information
-                  </h3>
-                  <table className="w-full table-auto text-sm text-gray-700">
-                    <tbody>
-                      {Object.entries({
-                        'Relation to Applicant': data.guadian,
-                        'Guardian Name': data.guadian_name,
-                        'Guardian Surname': data.guadian_surname,
-                        'Guardian Initials': data.guadian_initials,
-                        'Guardian Title': data.guadian_title,
-                        'Guardian ID': data.guadian_id,
-                        'Guardian Income': data.guadian_income,
-                      }).map(([key, value]) => (
-                        <tr key={key} className="border-b border-gray-200">
-                          <th className="text-left py-2 px-4 font-medium">
-                            {key}
-                          </th>
-                          <td className="py-2 px-4">{value || 'Not available'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  <button
-                    onClick={() => window.location.hash = '/application/course/guadian'}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded transition duration-200"
-                  >
-                    Edit Guardian Info
-                  </button>
-                </div>
-
-                {/* Subjects Table */}
-                <div className="md:col-span-2 border border-gray-200 rounded-lg p-4 space-y-4">
-                  <h3 className="font-semibold text-gray-800 text-center underline">
-                    Subject and Level Information
-                  </h3>
-                  <div className="overflow-x-auto">
-                    <table className="w-full table-auto text-sm text-gray-700">
-                      <thead>
-                        <tr className="bg-gray-100">
-                          <th className="py-2 px-4">Subject</th>
-                          <th className="py-2 px-4">Level</th>
-                          <th className="py-2 px-4">Percentage</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {Array.from({ length: 9 }, (_, i) => i + 1).map((i) => (
-                          <tr key={i} className="border-b border-gray-200">
-                            <td className="py-2 px-4">{data[`subject${i}`] || "Not available"}</td>
-                            <td className="py-2 px-4">{data[`level${i}` || "Not available"]}</td>
-                            <td className="py-2 px-4">
-                              {data[`percentage${i}` || "Not available"]}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  <button
-                    onClick={() => window.location.hash = '/application/course/subjects'}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded transition duration-200"
-                  >
-                    Edit Subjects
-                  </button>
-                </div>
+                ) : null}
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-indigo-100 ring-1 ring-white/20">
+                  {ready ? (
+                    <CircleCheck className="h-3.5 w-3.5 text-emerald-300" />
+                  ) : (
+                    <CircleX className="h-3.5 w-3.5 text-red-300" />
+                  )}
+                  {ready ? 'Ready to submit' : 'Draft'}
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-indigo-100 ring-1 ring-white/20">
+                  {paid ? (
+                    <CircleCheck className="h-3.5 w-3.5 text-emerald-300" />
+                  ) : (
+                    <Wallet className="h-3.5 w-3.5 text-amber-300" />
+                  )}
+                  {paid ? 'Payment received' : 'Payment pending'}
+                </span>
               </div>
             </div>
+          </div>
 
-            {/* University Info */}
-            <div id='courses' className="bg-white shadow-md rounded-lg p-6">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">
-                University Courses
-              </h2>
-              <div className="grid md:grid-cols-2 gap-6">
-                <div id='nwu' style={{ display: 'none' }} className="border border-gray-200 rounded-lg p-4 space-y-4">
-                  <div className="flex items-center gap-4 mb-4 w-full justify-center">
-                    <img 
-                      src="https://services.nwu.ac.za/sites/services.nwu.ac.za/files/files/designs-branding/NWU-holding-shape-digital-white.png"
-                      alt="North-West University Logo"
-                      className="h-24 w-auto mx-auto"
-                    />
-                  </div>
-                <div className="flex items-center justify-center mb-4">
-                  <h3 className="font-semibold text-gray-800 align-middle justify-center">NWU Details</h3>
-                </div>
-                  <table className="w-full table-auto text-sm text-gray-700">
-                    <tbody>
-                      <tr className="border-b border-gray-200">
-                        <th className="text-left py-2 px-4 font-medium">
-                          {data.nwu_campus1}
-                        </th>
-                        <td className="py-2 px-4">{data.nwu_course1 || "Not available"}</td>
-                      </tr>
-                      <tr className="border-b border-gray-200">
-                        <th className="text-left py-2 px-4 font-medium">
-                          {data.nwu_campus2}
-                        </th>
-                        <td className="py-2 px-4">{data.nwu_course2 || "Not available"}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                  <button
-                    onClick={() => window.location.hash = '/application/course/nwu'}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded transition duration-200"
-                  >
-                    Edit NWU Info
-                  </button>
-                </div>
-
-                <div className="border border-gray-200 rounded-lg p-4 space-y-4" style={{ display: 'none' }}>
-                    <div className="flex justify-center items-center gap-4 mb-4 w-full">
-                    <img 
-                      src="https://uwc-za.b-cdn.net/files/images/UWC-logo_transparent-writing-1.svg"
-                      alt="University of Western Cape Logo"
-                      className="h-25 w-auto align-middle" 
-                    />
-                    </div>
-                  <div className="flex items-center justify-center mb-4">
-                    <h3 className="font-semibold text-gray-800 align-middle justify-center">UWC Details</h3>
-                  </div>
-                  <table className="w-full table-auto text-sm text-gray-700">
-                    <tbody>
-                      <tr className="border-b border-gray-200">
-                        <th className="text-left py-2 px-4 font-medium">
-                          {data.uwc_faculty1}
-                        </th>
-                        <td className="py-2 px-4">{data.uwc_course1 || "Not available"}</td>
-                      </tr>
-                      <tr className="border-b border-gray-200">
-                        <th className="text-left py-2 px-4 font-medium">
-                          {data.uwc_faculty2}
-                        </th>
-                        <td className="py-2 px-4">{data.uwc_course2 || "Not available"}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                  <button
-                    onClick={() => window.location.hash = '/application/course/uwc'}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded transition duration-200"
-                  >
-                    Edit UWC Info
-                  </button>
-                </div>
-
-                <div className="border border-gray-200 rounded-lg p-4 space-y-4">
-                    <div className="flex justify-center items-center gap-4 mb-4 w-full">
-                    <img 
-                      src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSTFcP-BCdvm1jpyx6fLd-naad3YjGBJ3RCWkZEUvGp2suQLjpburtkO76-&s=10"
-                      alt="CAO Logo"
-                      className="h-25 w-auto align-middle" 
-                    />
-                    </div>
-                  <div className="flex items-center justify-center mb-4">
-                    <h3 className="font-semibold text-gray-800 align-middle justify-center">CAO Details</h3>
-                  </div>
-                  <table className="w-full table-auto text-sm text-gray-700">
-                    <tbody>
-                      {Array.from({ length: 6 }, (_, i) => {
-                        const institution = data[`cao_institution${i + 1}`];
-                        const course = data[`cao_course${i + 1}`];
-                        return (
-                          <tr className="border-b border-gray-200" key={i}>
-                            <th className="text-left py-2 px-4 font-medium">
-                              {institution && institution !== "" ? institution : "Not available"}
-                            </th>
-                            <td className="py-2 px-4">
-                              {course && course !== "" ? course : "Not available"}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                  <button
-                    onClick={() => window.location.hash = '/application/course/cao'}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded transition duration-200"
-                  >
-                    Edit CAO Info
-                  </button>
-                </div>
-
-                <div className="border border-gray-200 rounded-lg p-4 space-y-4">
-                  <div className="flex items-center gap-4 mb-4 w-full justify-center">
-                    <img 
-                      src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT2FYYbKAlNjpB1lpbMSBBheXBpOApV9V7jjw&s"
-                      alt="University of Johannesburg Logo"
-                      className="h-25 w-auto align-middle" // Adjust size as needed
-                    />
-                  </div>
-                  <div className="flex items-center justify-center mb-4">
-                    <h3 className="font-semibold text-gray-800 align-middle justify-center">UJ Details</h3>
-                  </div>
-                  <table className="w-full table-auto text-sm text-gray-700">
-                    <tbody>
-                      <tr className="border-b border-gray-200">
-                        <th className="text-left py-2 px-4 font-medium">
-                          {data.uj_faculty1 && data.uj_faculty1 !== "" ? data.uj_faculty1 : "Not available"}
-                        </th>
-                        <td className="py-2 px-4">
-                          {data.uj_course1 && data.uj_course1 !== "" ? data.uj_course1 : "Not available"}
-                        </td>
-                      </tr>
-                      <tr className="border-b border-gray-200">
-                        <th className="text-left py-2 px-4 font-medium">
-                          {data.uj_faculty2 && data.uj_faculty2 !== "" ? data.uj_faculty2 : "Not available"}
-                        </th>
-                        <td className="py-2 px-4">
-                          {data.uj_course2 && data.uj_course2 !== "" ? data.uj_course2 : "Not available"}
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                  <button
-                    onClick={() => window.location.hash = '/application/course/uj'}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded transition duration-200"
-                  >
-                    Edit UJ Info
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Application Actions */}
-            <div className="bg-white shadow-md rounded-lg p-6 text-center">
-              <p className="text-lg text-gray-800 mb-4">
-                If all your information is correct and you're ready to send your
-                application, press Apply below.
+          <div className="grid grid-cols-3 gap-3 md:ml-auto md:max-w-md">
+            <div className="rounded-xl bg-white/10 px-4 py-3 text-center ring-1 ring-white/15">
+              <p className="text-2xl font-bold text-white">
+                {universitiesSelected}
+                <span className="text-sm font-medium text-indigo-200">/4</span>
               </p>
-              <div className="flex flex-col sm:flex-row justify-center gap-4">
-                <button
-                  type="button"
-                  onClick={(e) => applicationSubmit(e, '1')}
-                  className="bg-green-600 hover:bg-green-700 text-white py-2 px-6 rounded transition duration-200"
-                >
-                  Send Application
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => applicationSubmit(e, '0')}
-                  className="bg-red-600 hover:bg-red-700 text-white py-2 px-6 rounded transition duration-200"
-                >
-                  Cancel Application
-                </button>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-indigo-200">Universities</p>
+            </div>
+            <div className="rounded-xl bg-white/10 px-4 py-3 text-center ring-1 ring-white/15">
+              <p className="text-2xl font-bold text-white">
+                {subjectsSelected}
+                <span className="text-sm font-medium text-indigo-200">/9</span>
+              </p>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-indigo-200">Subjects</p>
+            </div>
+            <div className="rounded-xl bg-white/10 px-4 py-3 text-center ring-1 ring-white/15">
+              <p className={`text-2xl font-bold ${paid ? 'text-emerald-300' : 'text-amber-300'}`}>
+                {paid ? 'Paid' : 'Due'}
+              </p>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-indigo-200">Fee R50</p>
+            </div>
+          </div>
+        </div>
+      </section>
+      <SectionNav />
+
+      <main className="flex-1">
+        <div className="mx-auto max-w-7xl space-y-10 px-4 py-8 sm:px-6 lg:px-8">
+          {/* Overview / Status */}
+          <section id="status" className="scroll-mt-32">
+            {paid ? (
+              <div className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4">
+                <CircleCheck className="h-6 w-6 shrink-0 text-emerald-600" />
+                <div>
+                  <p className="font-bold text-emerald-800">Payment received</p>
+                  <p className="text-sm text-emerald-700">
+                    Your R50 application fee has been paid. Review your details and submit your
+                    application when ready.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 sm:p-6">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
+                    <Wallet className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-bold text-amber-900">Payment required</h3>
+                    <p className="mt-0.5 text-sm text-amber-800">
+                      Pay the R50 application fee to the account below. We verify payment using your
+                      ID number, so please use it as the payment reference.
+                    </p>
+                    <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                      <CopyRow label="Bank" value="Capitec" />
+                      <CopyRow label="Account type" value="Savings" />
+                      <CopyRow label="Account number" value="1624390313" />
+                      <CopyRow
+                        label="Reference (your ID)"
+                        value={display(data['identification_number'])}
+                        accent
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </section>
+
+          {/* Applicant Details */}
+          <section className="space-y-5">
+            <GroupHeading
+              icon={User}
+              title="Applicant details"
+              subtitle="Review your personal, contact and background information"
+            />
+            <div className="grid gap-6 lg:grid-cols-2">
+              <InfoCard
+                id="personal"
+                title="Personal Details"
+                subtitle="Identity and background"
+                icon={User}
+                tone="bg-indigo-50 text-indigo-600"
+                editPath="/application/course/personal"
+                fields={[
+                  { label: 'Title', value: data.title },
+                  { label: 'First Name', value: data.first_name },
+                  { label: 'Middle Name', value: data.middle_name },
+                  { label: 'Initials', value: data.initials },
+                  { label: 'Surname', value: data.surname },
+                  { label: 'ID Number', value: data['identification_number'] },
+                  { label: 'Date of Birth', value: data.date_of_birth?.split('T')[0] },
+                  { label: 'Gender', value: data.gender },
+                  { label: 'Marriage Status', value: data.marriage_status },
+                  { label: 'Race', value: data.race },
+                  { label: 'Population', value: data.population },
+                  { label: 'Disability', value: data.disability },
+                  { label: 'School', value: data.school },
+                ]}
+              />
+
+              <InfoCard
+                id="contact"
+                title="Contact Information"
+                subtitle="How universities can reach you"
+                icon={Phone}
+                tone="bg-sky-50 text-sky-600"
+                editPath="/application/course/contact"
+                fields={[
+                  { label: 'Email', value: data.email },
+                  { label: 'Phone Number', value: data.cell_num },
+                  { label: 'Box Number', value: data.boxnumber },
+                  { label: 'Street Address', value: data.streat_address },
+                  { label: 'Suburb', value: data.suburb },
+                  { label: 'Postal Code', value: data.postal_code },
+                  { label: 'City', value: data.city },
+                  { label: 'Province', value: data.province },
+                ]}
+              />
+
+              <InfoCard
+                id="additional"
+                title="Additional Information"
+                subtitle="Matric and academic details"
+                icon={FileText}
+                tone="bg-amber-50 text-amber-600"
+                editPath="/application/course/Additional"
+                fields={[
+                  { label: 'Examination Number', value: data.examination_number },
+                  { label: 'Education Department', value: data['education_department'] },
+                  { label: 'Specify Device', value: data['specify_device'] },
+                  { label: 'Presentation Method', value: data['presentation_method'] },
+                  { label: 'Matric Upgrading', value: data.matric_upgrading },
+                  { label: 'Matric Completed', value: data.matric_completed },
+                  { label: 'Highest Grade Passed', value: data.highest_grade },
+                  { label: 'Matric Year', value: data['matric_year'] },
+                ]}
+              />
+
+              <InfoCard
+                id="guardian"
+                title="Guardian Information"
+                subtitle="Your guardian or sponsor"
+                icon={ShieldCheck}
+                tone="bg-violet-50 text-violet-600"
+                editPath="/application/course/guadian"
+                fields={[
+                  { label: 'Relation to Applicant', value: data.guadian },
+                  { label: 'Guardian Name', value: data.guadian_name },
+                  { label: 'Guardian Surname', value: data.guadian_surname },
+                  { label: 'Guardian Initials', value: data.guadian_initials },
+                  { label: 'Guardian Title', value: data.guadian_title },
+                  { label: 'Guardian ID', value: data.guadian_id },
+                  { label: 'Guardian Income', value: data.guadian_income },
+                ]}
+              />
+            </div>
+          </section>
+
+          {/* Subjects */}
+          <section id="subjects" className="scroll-mt-32 space-y-5">
+            <GroupHeading
+              icon={GraduationCap}
+              title="Subjects & Levels"
+              subtitle="Your matric subjects and performance"
+            />
+            <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+              <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-5 py-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+                    <GraduationCap className="h-5 w-5" />
+                  </div>
+                  <h3 className="font-bold text-gray-900">Subject and Level Information</h3>
+                </div>
+                <EditButton path="/application/course/subjects" />
+              </div>
+
+            <SubjectsTable data={data} />
+            </div>
+          </section>
+
+          {/* University Courses */}
+          <section id="courses" className="scroll-mt-32 space-y-5">
+            <GroupHeading
+              icon={Building2}
+              title="University Courses"
+              subtitle="Programmes you applied for at each institution"
+            />
+            <div className="grid gap-6 md:grid-cols-2">
+
+              <UniversityCard
+                id="nwu"
+                name="North-West University"
+                tagline="NWU"
+                logo="https://veldfiremedia.com/wp-content/uploads/2022/12/NWU-logo-1200x620-1.png"
+                rows={[
+                  { label: data.nwu_campus1, value: data.nwu_course1 },
+                  { label: data.nwu_campus2, value: data.nwu_course2 },
+                ]}
+                editPath="/application/course/nwu"
+              />
+
+              <UniversityCard
+                id="uwc"
+                name="University of Western Cape"
+                tagline="UWC"
+                logo="https://www.sabcnews.com/sabcnews/wp-content/uploads/2018/01/uwc-logo.jpg"
+                rows={[
+                  { label: data.uwc_faculty1, value: data.uwc_course1 },
+                  { label: data.uwc_faculty2, value: data.uwc_course2 },
+                ]}
+                editPath="/application/course/uwc"
+              />
+
+              <UniversityCard
+                id="cao"
+                name="Central Admission Office"
+                tagline="CAO"
+                logo="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSTFcP-BCdvm1jpyx6fLd-naad3YjGBJ3RCWkZEUvGp2suQLjpburtkO76-&s=10"
+                rows={Array.from({ length: 6 }, (_, i) => i + 1).map((i) => ({
+                  label: data[`cao_institution${i}`],
+                  value: data[`cao_course${i}`],
+                }))}
+                editPath="/application/course/cao"
+              />
+
+              <UniversityCard
+                id="uj"
+                name="University of Johannesburg"
+                tagline="UJ"
+                logo="https://www.go2ppo.com/wp-content/uploads/2022/10/uj_logo.png"
+                rows={[
+                  { label: data.uj_faculty1, value: data.uj_course1 },
+                  { label: data.uj_faculty2, value: data.uj_course2 },
+                ]}
+                editPath="/application/course/uj"
+              />
+            </div>
+          </section>
+
+          {/* Submit */}
+          <section id="actions" className="scroll-mt-32">
+            <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+              <div className="bg-gradient-to-r from-indigo-600 to-blue-700 px-6 py-4">
+                <h2 className="flex items-center gap-2 font-bold text-white">
+                  <Send className="h-5 w-5" />
+                  Submit your application
+                </h2>
+                <p className="mt-0.5 text-sm text-indigo-100">
+                  Double-check all the information above before submitting.
+                </p>
+              </div>
+              <div className="px-6 py-8 text-center">
+                <p className="mx-auto max-w-xl text-sm text-gray-600">
+                  If all your information is correct and you're ready to send your application
+                  to the selected universities, press <strong>Send Application</strong> below.
+                </p>
+                <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+                  <button
+                    type="button"
+                    onClick={(e) => applicationSubmit(e, '1')}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-8 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 active:scale-[0.98]"
+                  >
+                    <Send className="h-4 w-4" />
+                    Send Application
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => applicationSubmit(e, '0')}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-8 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-50 active:scale-[0.98]"
+                  >
+                    <CircleX className="h-4 w-4" />
+                    Cancel Application
+                  </button>
+                </div>
               </div>
             </div>
           </section>
